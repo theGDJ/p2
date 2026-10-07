@@ -28,6 +28,15 @@ import { STD_WAVE13 } from "../src/db/seed-waves-13";
 import { STD_WAVE14 } from "../src/db/seed-waves-14";
 import { STD_WAVE15 } from "../src/db/seed-waves-15";
 import { STD_WAVE16 } from "../src/db/seed-waves-16";
+import { STD_WAVE17 } from "../src/db/seed-waves-17";
+import { STD_WAVE18 } from "../src/db/seed-waves-18";
+import { STD_WAVE19 } from "../src/db/seed-waves-19";
+import { STD_WAVE20 } from "../src/db/seed-waves-20";
+import { STD_WAVE21 } from "../src/db/seed-waves-21";
+import { STD_WAVE22 } from "../src/db/seed-waves-22";
+import { STD_WAVE23 } from "../src/db/seed-waves-23";
+import { STD_WAVE24 } from "../src/db/seed-waves-24";
+import { STD_WAVE25, HALLMARK_DOCS, AHC_WAVE25 } from "../src/db/seed-waves-25";
 import { LABS_NETWORK_UNIQUE } from "../src/db/seed";
 import { PRODUCTS, matchProducts } from "../src/lib/assistant/products";
 import { MARK_PATTERNS } from "../src/lib/verify/extract";
@@ -82,9 +91,18 @@ const allStandards = [
   ...STD_WAVE14,
   ...STD_WAVE15,
   ...STD_WAVE16,
+  ...STD_WAVE17,
+  ...STD_WAVE18,
+  ...STD_WAVE19,
+  ...STD_WAVE20,
+  ...STD_WAVE21,
+  ...STD_WAVE22,
+  ...STD_WAVE23,
+  ...STD_WAVE24,
+  ...STD_WAVE25,
 ];
-const allDocs = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3];
-const allLabs = [...LABS, ...LABS_MORE, ...LABS_WAVE3, ...LABS_NETWORK_UNIQUE];
+const allDocs = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3, ...HALLMARK_DOCS];
+const allLabs = [...LABS, ...LABS_MORE, ...LABS_WAVE3, ...LABS_NETWORK_UNIQUE, ...AHC_WAVE25];
 const allLicences = [...LICENCES, ...LICENCES_MORE, ...LICENCES_WAVE3];
 
 const problems: string[] = [];

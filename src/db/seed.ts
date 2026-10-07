@@ -13,6 +13,15 @@ import { STD_WAVE13 } from "@/db/seed-waves-13";
 import { STD_WAVE14 } from "@/db/seed-waves-14";
 import { STD_WAVE15 } from "@/db/seed-waves-15";
 import { STD_WAVE16 } from "@/db/seed-waves-16";
+import { STD_WAVE17 } from "@/db/seed-waves-17";
+import { STD_WAVE18 } from "@/db/seed-waves-18";
+import { STD_WAVE19 } from "@/db/seed-waves-19";
+import { STD_WAVE20 } from "@/db/seed-waves-20";
+import { STD_WAVE21 } from "@/db/seed-waves-21";
+import { STD_WAVE22 } from "@/db/seed-waves-22";
+import { STD_WAVE23 } from "@/db/seed-waves-23";
+import { STD_WAVE24 } from "@/db/seed-waves-24";
+import { STD_WAVE25, HALLMARK_DOCS, AHC_WAVE25 } from "@/db/seed-waves-25";
 import { LABS_NETWORK, buildLabs } from "@/db/seed-labs";
 
 /* ------------------------------ STANDARDS ------------------------------ */
@@ -1456,17 +1465,27 @@ export async function seed(dbOverride?: typeof db) {
     ...STD_WAVE14,
     ...STD_WAVE15,
     ...STD_WAVE16,
+    ...STD_WAVE17,
+    ...STD_WAVE18,
+    ...STD_WAVE19,
+    ...STD_WAVE20,
+    ...STD_WAVE21,
+    ...STD_WAVE22,
+    ...STD_WAVE23,
+    ...STD_WAVE24,
+    ...STD_WAVE25,
   ];
-  const ALL_DOCS = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3];
+  const ALL_DOCS = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3, ...HALLMARK_DOCS];
   const ALL_LABS = [
     ...LABS,
     ...LABS_MORE,
     ...LABS_WAVE3,
     ...LABS_NETWORK_UNIQUE,
+    ...AHC_WAVE25,
   ];
   const ALL_LICENCES = [...LICENCES, ...LICENCES_MORE, ...LICENCES_WAVE3];
 
-  /* insert in chunks — the expanded catalogue is ~2000 rows */
+  /* insert in chunks — the expanded catalogue is ~3000 rows */
   const CHUNK = 250;
   for (let i = 0; i < ALL_STANDARDS.length; i += CHUNK)
     await target.insert(standards).values(ALL_STANDARDS.slice(i, i + CHUNK) as never);
