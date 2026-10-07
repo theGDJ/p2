@@ -55,7 +55,7 @@ The standards explorer's “mandatory/QCO” filter and count use a non-null `qc
 
 ### `src/db/seed.ts` — knowledge base loader
 Run with `npx tsx --env-file=.env src/db/seed.ts`. It deletes all four content tables then inserts:
-- **1,971 standards** — each with summary, keyword array (incl. Hindi Devanagari terms like "सीमेंट", "सरिया"), key clause sections, related standards. Authored through the block DSL in `seed-kit.ts`; waves 4–7 are legacy object literals and waves 8–16 are block-built files covering construction, electrical, electronics/CRS, mechanical, chemicals, plastics, food, consumer and management systems.
+- **2,982 standards** — each with summary, keyword array (incl. Hindi Devanagari terms like "सीमेंट", "सरिया"), key clause sections, related standards. Authored through the block DSL in `seed-kit.ts`; waves 4–7 are legacy object literals, waves 8–16 are block-built files covering construction, electrical, electronics/CRS, mechanical, chemicals, plastics, food, consumer and management systems, and waves 17–24 (the 1,011-record expansion) add quality-infrastructure adoptions (IS/ISO 9000/14000/27000/17000 and 10993 series), IEC-adopted electrical and electronics safety (transformers, LV assemblies, switchgear, luminaires, lamp controlgear, appliance parts, medical electrical equipment), mechanical and automotive standards (fasteners, alloy steels, pumps/valves, lifting equipment, ISO 26262/6469/15118), petroleum, fertilizer, rubber, plastics and environmental test methods, geotechnical and building-services practice, food microbiology and chemistry methods, and hallmarking practice.
 - **29 knowledge docs** — bilingual (EN + HI) explainers for schemes, QCOs, hallmarking, fees, consumer verification.
 - **394 labs** — 41 BIS laboratories, 277 recognized labs (CSIR/STQC/CPRI/regional test houses) and 76 Assaying & Hallmarking Centres across all 36 states and UTs, with capability categories and the standards each tests.
 - **56 licences** — demo registry entries across all four mark types (ISI, CRS, jeweller, HUID), including deliberately *suspended* and *expired* ones so the verifier shows realistic statuses.
@@ -72,7 +72,7 @@ Run with `npx tsx --env-file=.env src/db/seed.ts`. It deletes all four content t
 - `detectLocale(text)`: if the query contains any Devanagari codepoint (`\u0900-\u097F`) → Hindi. This is how the bot auto-replies in the language of the question.
 
 ### `src/lib/assistant/products.ts` — product → standard mapping
-- 20 hard-coded `ProductProfile`s: cement, TMT steel, gold, silver, IT electronics, batteries, cables, plugs/switches, fans, LED lamps, helmets, pressure cookers, packaged water, pipes, toys, LPG cylinders/stoves, energy meters, MCBs/RCCBs, fire extinguishers, plywood, masks.
+- 41 hard-coded `ProductProfile`s: cement, TMT steel, gold, silver, IT electronics, batteries, cables, plugs/switches, fans, LED lamps, LED luminaires, helmets, pressure cookers, kitchen machines, packaged water, pipes, toys, LPG cylinders/stoves, energy meters, MCBs/RCCBs, fire extinguishers, plywood, masks, washing machines, refrigerators, air conditioners, microwave ovens, water heaters, vacuum cleaners, mobile phones, electric irons, grooming appliances, deep fat fryers, burnt clay bricks, prestressed concrete, grey cast iron, solar PV, EV charging, fertilisers, management-system certification and medical devices.
 - Each profile: bilingual label, `aliases` (English + Hindi: "tmt", "सरिया", "saria"…), `category`, the applicable IS codes, `scheme` (scheme1/scheme2/hallmark/scheme4/voluntary), `mandatory` flag, and a bilingual regulatory note.
 - `matchProducts(query)`: lowercases the query, scans every alias as a substring; aliases longer than 4 chars score 3, shorter score 2; returns the **top 3 profiles** by score. This powers both the Finder page and the assistant's product enrichment.
 
@@ -156,7 +156,7 @@ The assistant is powered by a **language model embedded in the server process** 
 ### Pages
 | Route | Type | What it does |
 |---|---|---|
-| `/` (home) | Server | Hero + AskBar, preset question chips, **live DB stat tiles** (1,971 IS / 588 mandatory / 394 labs / 56 marks / N answered), 8-service grid, 3-step "how answers are built", 4 scheme cards, bilingual CTA |
+| `/` (home) | Server | Hero + AskBar, preset question chips, **live DB stat tiles** (2,982 IS / 613 mandatory / 394 labs / 56 marks / N answered), 8-service grid, 3-step "how answers are built", 4 scheme cards, bilingual CTA |
 | `/assistant` | Server shell + `ChatClient` | The chat app (below) |
 | `/finder` | Server shell + `FinderClient` | Product → standard wizard (below) |
 | `/standards` | Server shell + `StandardsClient` | Catalogue explorer: 180 ms-debounced search with `AbortController` cancellation, category chips, mandatory-only toggle, list + **detail drawer** (clauses, related, editions) |
