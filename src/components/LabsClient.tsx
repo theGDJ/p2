@@ -29,7 +29,7 @@ const KINDS = [
   { id: "AHC", label: "Assaying and hallmarking centres" },
 ];
 
-const PAGE = 40;
+const PAGE = 12;
 
 export function LabsClient({ initial, states }: { initial: Lab[]; states: string[] }) {
   const { locale } = useLocale();
@@ -101,7 +101,7 @@ export function LabsClient({ initial, states }: { initial: Lab[]; states: string
   return (
     <div>
       {/* filters */}
-      <div className="grid gap-4 border-b border-rule pb-6 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1fr]">
+      <div className="sticky top-[var(--header-h)] z-20 grid gap-3 border-b border-rule bg-canvas py-3 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_1fr]">
         <div>
           <label htmlFor={ids.q} className="label">
             {tx(locale, "Facility, city or state")}
@@ -213,7 +213,7 @@ export function LabsClient({ initial, states }: { initial: Lab[]; states: string
             </thead>
             <tbody className="divide-y divide-rule">
               {labs.slice(0, shown).map((l) => (
-                <tr key={l.id} className="block px-4 py-4 md:table-row md:p-0">
+                <tr key={l.id} className="block px-4 py-2.5 md:table-row md:p-0">
                   <th scope="row" className="block text-left font-normal md:table-cell md:w-[30%] md:px-4 md:py-3.5 md:align-top">
                     <span className="block text-base font-medium leading-snug text-ink">{l.name}</span>
                     <span className={`tag mt-1.5 ${l.kind === "BIS Laboratory" ? "tag-select" : ""}`}>
@@ -223,7 +223,7 @@ export function LabsClient({ initial, states }: { initial: Lab[]; states: string
                   <td className="mt-2 block text-sm text-body md:mt-0 md:table-cell md:px-4 md:py-3.5 md:align-top">
                     {l.city}, {l.state}
                   </td>
-                  <td className="mt-1 block text-sm text-body md:mt-0 md:table-cell md:px-4 md:py-3.5 md:align-top">
+                  <td className="mt-1 hidden text-sm text-body md:mt-0 md:table-cell md:px-4 md:py-3 md:align-top">
                     {(l.capabilities ?? []).map((c) => tx(locale, categoryLabel(c))).join(", ")}
                     {l.standards?.length > 0 && (
                       <span className="mt-1 block text-xs text-muted">
@@ -231,7 +231,7 @@ export function LabsClient({ initial, states }: { initial: Lab[]; states: string
                       </span>
                     )}
                   </td>
-                  <td className="mt-2 block text-sm md:mt-0 md:table-cell md:w-[24%] md:px-4 md:py-3.5 md:align-top">
+                  <td className="mt-2 hidden text-sm md:mt-0 md:table-cell md:w-[24%] md:px-4 md:py-3 md:align-top">
                     {l.phone && (
                       <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="block text-body hover:text-ink">
                         {l.phone}

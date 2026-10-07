@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { labs, standards } from "@/db/schema";
 import { ilike, or } from "drizzle-orm";
-import { matchProducts, SCHEME_LABEL } from "@/lib/assistant/products";
+import { matchProducts, SCHEME_LABEL, SCHEME_LABEL_HI } from "@/lib/assistant/products";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +75,7 @@ export async function POST(req: NextRequest) {
         mandatory: p.mandatory,
         scheme: p.scheme,
         schemeLabel: SCHEME_LABEL[p.scheme],
+        schemeLabelHi: SCHEME_LABEL_HI[p.scheme],
         standards: p.standards,
         note: p.note.en,
         noteHi: p.note.hi,

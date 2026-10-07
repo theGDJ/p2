@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Search, X } from "lucide-react";
+import { ArrowRight, Download, Search, X } from "lucide-react";
 import { categoryLabel, formatCount, standardHref } from "@/lib/format";
 import { EmptyState, Notice, ObligationTag, StandardCode, TierLabel } from "@/components/ui";
 import { useLocale } from "@/lib/locale-context";
@@ -40,6 +40,7 @@ const CATS = [
 ];
 
 const LIMIT = 250;
+const PAGE_SIZE = 12;
 
 /** Mirror of the ranking in /api/standards, used to explain each result. */
 function matchedIn(s: Std, q: string): string[] {
@@ -69,7 +70,7 @@ function Preview({ s, onClose, locale }: { s: Std; onClose: () => void; locale: 
       <div className="max-h-[calc(100vh-var(--header-h)-120px)] overflow-y-auto px-5 pb-5 pt-4">
         <div className="flex flex-wrap items-center gap-2">
           <StandardCode code={s.code} link={false} className="text-[15px]" />
-          <ObligationTag mandatory={s.mandatory} />
+          <ObligationTag mandatory={s.mandatory} scheme={s.scheme} />
         </div>
         <h2 className="mt-2 text-lg font-semibold leading-snug">{s.title}</h2>
         <p className="mt-3 text-sm text-body">{s.summary}</p>
@@ -105,6 +106,18 @@ function Preview({ s, onClose, locale }: { s: Std; onClose: () => void; locale: 
           {tx(locale, "Open the full record")}
           <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
+        <a
+          href="https://standardsbis.bsbedge.com/"
+          target="_blank"
+          rel="noreferrer"
+          className="btn btn-secondary mt-2 w-full"
+        >
+          {tx(locale, "Download standard PDF from BIS")}
+          <Download className="size-4" aria-hidden="true" />
+        </a>
+        <p className="mt-2 text-xs text-muted">
+          {tx(locale, "Search the BIS portal for")} <span className="id">{s.code}</span>.
+        </p>
       </div>
     </div>
   );
@@ -124,6 +137,7 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
   const [attempt, setAttempt] = useState(0);
   const [active, setActive] = useState<Std | null>(null);
   const [queried, setQueried] = useState(params.get("q") ?? "");
+  const [page, setPage] = useState(1);
   const first = useRef(true);
   const searchId = useId();
   const catId = useId();
@@ -147,6 +161,7 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
           if (!res.ok) throw new Error(String(res.status));
           const data: { standards: Std[] } = await res.json();
           setItems(data.standards);
+          setPage(1);
           setQueried(q.trim());
           setStatus("ready");
         } catch (e) {
@@ -182,7 +197,7 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
   return (
     <div className="grid gap-8 lg:grid-cols-[200px_minmax(0,1fr)] xl:grid-cols-[200px_minmax(0,1fr)_360px]">
       {/* ------------------------------------------------------ filters */}
-      <aside aria-label="Filters" className="space-y-6 lg:sticky lg:top-[calc(var(--header-h)+24px)] lg:self-start">
+      <aside aria-label={tx(locale, "Filters")} className="space-y-6 lg:sticky lg:top-[calc(var(--header-h)+24px)] lg:self-start">
         <div className="lg:hidden">
           <label htmlFor={catId} className="label">
             {tx(locale, "Category")}
@@ -294,8 +309,8 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
                 {tx(locale, "clear the filters")}
               </button>
               . {tx(locale, "For product questions, the")} {" "}
-              <Link href={`/finder${queried ? `?q=${encodeURIComponent(queried)}` : ""}`} className="link">
-                {tx(locale, "product finder")}
+              <Link href={`/assistant?mode=identify${queried ? `&q=${encodeURIComponent(queried)}` : ""}`} className="link">
+                {tx(locale, "product checker")}
               </Link>{" "}
               {tx(locale, "maps descriptions to standards.")}
             </EmptyState>
@@ -303,7 +318,7 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
         )}
 
         <ul className={`divide-y divide-rule transition-opacity ${status === "loading" ? "opacity-50" : ""}`}>
-          {items.map((s) => {
+          {items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map((s) => {
             const why = reasons.get(s.id) ?? [];
             const selected = active?.id === s.id;
             return (
@@ -312,18 +327,18 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
                   href={standardHref(s.code)}
                   onClick={(e) => onRowClick(e, s)}
                   aria-current={selected ? "true" : undefined}
-                  className={`grid gap-x-5 gap-y-1 px-2 py-4 transition-colors sm:grid-cols-[170px_minmax(0,1fr)] ${
+                  className={`grid gap-x-5 gap-y-0.5 px-2 py-2.5 transition-colors sm:grid-cols-[170px_minmax(0,1fr)] ${
                     selected ? "bg-select-soft" : "hover:bg-sunken/70"
                   }`}
                 >
                   <div className="flex flex-wrap items-start gap-2 sm:flex-col sm:gap-1.5">
                     <span className="id text-sm">{s.code}</span>
-                    <ObligationTag mandatory={s.mandatory} />
+                    <ObligationTag mandatory={s.mandatory} scheme={s.scheme} />
                   </div>
                   <div className="min-w-0">
                     <p className="text-base font-medium leading-snug text-ink">{s.title}</p>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted">{s.summary}</p>
-                    <p className="mt-1.5 text-2xs text-muted">
+                    <p className="mt-0.5 line-clamp-1 text-sm text-muted">{s.summary}</p>
+                    <p className="mt-1 text-2xs text-muted">
                       {tx(locale, categoryLabel(s.category))}
                       {why.length > 0 && <> · {tx(locale, "Matched in")} {why.map((x) => tx(locale, x)).join(", ")}</>}
                     </p>
@@ -333,17 +348,28 @@ export function StandardsClient({ initial }: { initial: Std[] }) {
             );
           })}
         </ul>
+        {status === "ready" && items.length > PAGE_SIZE && (
+          <nav aria-label={tx(locale, "Standards pages")} className="mt-4 flex items-center justify-between border-t border-rule pt-3">
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page === 1} onClick={() => setPage((n) => n - 1)}>{tx(locale, "Previous")}</button>
+            <span className="text-xs text-muted">{tx(locale, "Page")} {page} {tx(locale, "of")} {Math.ceil(items.length / PAGE_SIZE)}</span>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page >= Math.ceil(items.length / PAGE_SIZE)} onClick={() => setPage((n) => n + 1)}>{tx(locale, "Next")}</button>
+          </nav>
+        )}
       </section>
 
       {/* ------------------------------------------- preview (wide screens) */}
-      <aside aria-label="Preview" className="hidden xl:block">
+      <aside aria-label={tx(locale, "Preview")} className="hidden xl:block">
         <div className="sticky top-[calc(var(--header-h)+24px)]">
           {active ? (
             <Preview s={active} locale={locale} onClose={() => setActive(null)} />
           ) : (
             <div className="rounded-lg border border-dashed border-rule-strong px-5 py-8 text-sm text-muted">
-              Select a standard to preview its scope, obligation and key clauses here. Open the full record for
-              related standards, laboratories and the certification route.
+              <p>{tx(locale, "Choose a standard from the results to see its details here.")}</p>
+              {items[0] && status === "ready" && (
+                <button type="button" onClick={() => setActive(items[0])} className="btn btn-secondary btn-sm mt-4">
+                  {tx(locale, "Preview the first result")}
+                </button>
+              )}
             </div>
           )}
         </div>

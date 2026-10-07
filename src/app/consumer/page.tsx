@@ -2,6 +2,7 @@ import { Nav, Footer, PageShell } from "@/components/Chrome";
 import { ComplaintForm, Verify } from "./ConsumerClient";
 import { getLocale } from "@/lib/server-locale";
 import { tx } from "@/lib/i18n";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata = {
   title: "Verify a mark",
@@ -33,7 +34,7 @@ export default async function ConsumerPage() {
       <Nav />
       <PageShell
         title={tx(locale, "Verify a mark")}
-        description={tx(locale, "Check the number printed with a Standard Mark against the registry, and report products that misuse it.")}
+        description={tx(locale, "Check a mark number. Report a product if the mark looks wrong.")}
       >
         <div className="grid gap-14 lg:grid-cols-2 lg:gap-16">
           <Verify />
@@ -63,6 +64,7 @@ export default async function ConsumerPage() {
         </section>
       </PageShell>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

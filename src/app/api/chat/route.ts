@@ -29,7 +29,14 @@ export async function POST(req: NextRequest) {
       content: message,
     });
 
-    const result = await answer(message, locale);
+    const recent = await db
+      .select({ role: chatMessages.role, content: chatMessages.content })
+      .from(chatMessages)
+      .where(eq(chatMessages.sessionId, sessionId))
+      .orderBy(desc(chatMessages.createdAt))
+      .limit(7);
+    const history = recent.slice(1).reverse().slice(-6);
+    const result = await answer(message, locale, history);
 
     await db.insert(chatMessages).values({
       sessionId,
