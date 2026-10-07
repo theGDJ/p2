@@ -55,9 +55,10 @@ The standards explorer's “mandatory/QCO” filter and count use a non-null `qc
 
 ### `src/db/seed.ts` — knowledge base loader
 Run with `npx tsx --env-file=.env src/db/seed.ts`. It deletes all four content tables then inserts:
-- **2,982 standards** — each with summary, keyword array (incl. Hindi Devanagari terms like "सीमेंट", "सरिया"), key clause sections, related standards. Authored through the block DSL in `seed-kit.ts`; waves 4–7 are legacy object literals, waves 8–16 are block-built files covering construction, electrical, electronics/CRS, mechanical, chemicals, plastics, food, consumer and management systems, and waves 17–24 (the 1,011-record expansion) add quality-infrastructure adoptions (IS/ISO 9000/14000/27000/17000 and 10993 series), IEC-adopted electrical and electronics safety (transformers, LV assemblies, switchgear, luminaires, lamp controlgear, appliance parts, medical electrical equipment), mechanical and automotive standards (fasteners, alloy steels, pumps/valves, lifting equipment, ISO 26262/6469/15118), petroleum, fertilizer, rubber, plastics and environmental test methods, geotechnical and building-services practice, food microbiology and chemistry methods, and hallmarking practice.
-- **29 knowledge docs** — bilingual (EN + HI) explainers for schemes, QCOs, hallmarking, fees, consumer verification.
-- **394 labs** — 41 BIS laboratories, 277 recognized labs (CSIR/STQC/CPRI/regional test houses) and 76 Assaying & Hallmarking Centres across all 36 states and UTs, with capability categories and the standards each tests.
+- **3,019 standards** — each with summary, keyword array (incl. Hindi Devanagari terms like "सीमेंट", "सरिया"), key clause sections, related standards. Authored through the block DSL in `seed-kit.ts`; waves 4–7 are legacy object literals, waves 8–16 are block-built files covering construction, electrical, electronics/CRS, mechanical, chemicals, plastics, food, consumer and management systems, waves 17–24 (the 1,011-record expansion) add quality-infrastructure adoptions (IS/ISO 9000/14000/27000/17000 and 10993 series), IEC-adopted electrical and electronics safety (transformers, LV assemblies, switchgear, luminaires, lamp controlgear, appliance parts, medical electrical equipment), mechanical and automotive standards (fasteners, alloy steels, pumps/valves, lifting equipment, ISO 26262/6469/15118), petroleum, fertilizer, rubber, plastics and environmental test methods, geotechnical and building-services practice and food microbiology and chemistry methods, and wave 25 adds the hallmarking deep dive (fineness grades and marking for gold, silver and platinum, assaying methods, jewellery materials, gemstone identification, repairs and AHC operations).
+
+- **37 knowledge docs** — bilingual (EN + HI) explainers for schemes, QCOs, hallmarking (how marking works, the four hallmark components, fineness grades, silver hallmarking, HUID checks, fees, repairs, buyer/seller checklist), fees and consumer verification.
+- **412 labs** — 41 BIS laboratories, 277 recognized labs (CSIR/STQC/CPRI/regional test houses) and 94 Assaying & Hallmarking Centres spanning every state and UT plus the main jewellery clusters (Mumbai, Surat, Rajkot, Jaipur, Coimbatore, Thrissur, Ludhiana…), with capability categories and the standards each tests.
 - **56 licences** — demo registry entries across all four mark types (ISI, CRS, jeweller, HUID), including deliberately *suspended* and *expired* ones so the verifier shows realistic statuses.
 
 `scripts/validate-data.ts` is the integrity gate for the catalogue: category whitelist, ≥3 keywords, at least one populated clause section, resolvable `related` codes, globally unique IS codes, licence mark-number regexes and Drizzle-shape checks. Run it with a `DATABASE_URL` in the environment (the seed module imports the DB client).
@@ -156,7 +157,7 @@ The assistant is powered by a **language model embedded in the server process** 
 ### Pages
 | Route | Type | What it does |
 |---|---|---|
-| `/` (home) | Server | Hero + AskBar, preset question chips, **live DB stat tiles** (2,982 IS / 613 mandatory / 394 labs / 56 marks / N answered), 8-service grid, 3-step "how answers are built", 4 scheme cards, bilingual CTA |
+| `/` (home) | Server | Hero + AskBar, preset question chips, **live DB stat tiles** (3,019 IS / 622 mandatory / 412 labs / 56 marks / N answered), 8-service grid, 3-step "how answers are built", 4 scheme cards, bilingual CTA |
 | `/assistant` | Server shell + `ChatClient` | The chat app (below) |
 | `/finder` | Server shell + `FinderClient` | Product → standard wizard (below) |
 | `/standards` | Server shell + `StandardsClient` | Catalogue explorer: 180 ms-debounced search with `AbortController` cancellation, category chips, mandatory-only toggle, list + **detail drawer** (clauses, related, editions) |
@@ -216,7 +217,7 @@ The assistant is powered by a **language model embedded in the server process** 
 - Retrieval is `LIKE`/substring based, not true full-text or vector search — long natural-language queries may miss; ranking heuristics compensate.
 - Product coverage is 20 curated families; unknown products fall back to token search or a graceful "cannot map".
 - The licence registry is **demo data** — real verification needs the official BIS API/registry.
-- `relevantDocs` and `labsFor` load full tables and filter in JS — fine at this scale (29 docs / 394 labs), would need SQL filtering at production scale.
+- `relevantDocs` and `labsFor` load full tables and filter in JS — fine at this scale (37 docs / 412 labs), would need SQL filtering at production scale.
 - `/api/chat` GET returns messages without auth — session UUIDs are the only access control, acceptable for a demo, not for production PII.
 
 ### Scan & Verify

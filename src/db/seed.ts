@@ -21,6 +21,7 @@ import { STD_WAVE21 } from "@/db/seed-waves-21";
 import { STD_WAVE22 } from "@/db/seed-waves-22";
 import { STD_WAVE23 } from "@/db/seed-waves-23";
 import { STD_WAVE24 } from "@/db/seed-waves-24";
+import { STD_WAVE25, HALLMARK_DOCS, AHC_WAVE25 } from "@/db/seed-waves-25";
 import { LABS_NETWORK, buildLabs } from "@/db/seed-labs";
 
 /* ------------------------------ STANDARDS ------------------------------ */
@@ -1472,13 +1473,15 @@ export async function seed(dbOverride?: typeof db) {
     ...STD_WAVE22,
     ...STD_WAVE23,
     ...STD_WAVE24,
+    ...STD_WAVE25,
   ];
-  const ALL_DOCS = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3];
+  const ALL_DOCS = [...DOCS, ...DOCS_MORE, ...DOCS_WAVE3, ...HALLMARK_DOCS];
   const ALL_LABS = [
     ...LABS,
     ...LABS_MORE,
     ...LABS_WAVE3,
     ...LABS_NETWORK_UNIQUE,
+    ...AHC_WAVE25,
   ];
   const ALL_LICENCES = [...LICENCES, ...LICENCES_MORE, ...LICENCES_WAVE3];
 

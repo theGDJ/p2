@@ -63,7 +63,7 @@ export const PRODUCTS: ProductProfile[] = [
     labelHi: "स्वर्ण आभूषण",
     aliases: ["gold", "jewellery", "jewelry", "ornament", "bangle", "sona", "सोना", "आभूषण", "gold coin"],
     category: "hallmark",
-    standards: ["IS 1417:2016"],
+    standards: ["IS 1417:2016", "IS 1417-1:2016", "IS 1418:2016", "IS 2114:2019", "IS 1417-8:2022"],
     scheme: "hallmark",
     mandatory: true,
     note: {
@@ -77,7 +77,7 @@ export const PRODUCTS: ProductProfile[] = [
     labelHi: "रजत आभूषण",
     aliases: ["silver", "chandi", "चांदी", "रजत"],
     category: "hallmark",
-    standards: ["IS 2112:2014"],
+    standards: ["IS 2112:2014", "IS 2112-1:2014", "IS 2113:2014", "IS 15820:2009", "IS 2112-3:2014"],
     scheme: "hallmark",
     mandatory: false,
     note: {
