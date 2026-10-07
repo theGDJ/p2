@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { inArray } from "drizzle-orm";
+import { ilike, inArray } from "drizzle-orm";
 import { db } from "@/db";
-import { licences } from "@/db/schema";
+import { licences, standards } from "@/db/schema";
+import { matchesStandardCode, parseStandardCode } from "@/lib/verify/standard-match";
 import { MARK_PATTERNS, type MarkType } from "@/lib/verify/extract";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +10,6 @@ export const dynamic = "force-dynamic";
 const MAX_BODY_BYTES = 16 * 1024;
 const MAX_CANDIDATES = 5;
 type Verdict = "VALID_IN_REGISTRY" | "SUSPENDED" | "EXPIRED" | "NOT_FOUND" | "NO_MARK_DETECTED";
-
-function normaliseCode(value: string): string {
-  return value.trim().replace(/\s+/g, "").toUpperCase();
-}
 
 function withinValidity(issuedOn: string, validTill: string): boolean {
   const parse = (value: string): number | null => {
@@ -81,12 +78,18 @@ export async function POST(req: NextRequest) {
     ? await db.select().from(licences).where(inArray(licences.markNo, validNumbers)).limit(MAX_CANDIDATES)
     : [];
   const matching = rows;
+  const parsedCode = typedIsCode ? parseStandardCode(typedIsCode) : null;
+  const catalogueRows = parsedCode
+    ? await db.select({ code: standards.code, title: standards.title }).from(standards)
+      .where(ilike(standards.code, `IS ${parsedCode.number}%`)).orderBy(standards.code)
+    : [];
+  const catalogueMatches = catalogueRows.filter((row) => matchesStandardCode(typedIsCode!, row.code));
   const foundInRegistry = matching.length > 0;
   const statusActive = matching.some((row) => row.status.toLowerCase() === "valid");
   const withinValidityCheck = matching.some((row) => withinValidity(row.issuedOn, row.validTill));
-  const standardConsistent = !typedIsCode || matching.some((row) =>
-    !row.standardCode || normaliseCode(row.standardCode) === normaliseCode(typedIsCode),
-  );
+  const standardConsistent = typedIsCode && matching.some((row) => row.standardCode)
+    ? matching.some((row) => row.standardCode && matchesStandardCode(typedIsCode, row.standardCode))
+    : null;
 
   let verdict: Verdict;
   if (candidates.length === 0) verdict = "NO_MARK_DETECTED";
@@ -98,6 +101,15 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     verdict,
     matches: matching,
+    catalogue: {
+      queriedCode: typedIsCode ?? null,
+      status: !typedIsCode ? "NOT_PROVIDED" : catalogueMatches.length ? "FOUND" : "NOT_FOUND",
+      matches: catalogueMatches,
+      exactEdition: !!parsedCode?.year && catalogueMatches.some((row) => {
+        const record = parseStandardCode(row.code);
+        return record?.parts === parsedCode.parts;
+      }),
+    },
     checks: {
       formatValid,
       foundInRegistry,

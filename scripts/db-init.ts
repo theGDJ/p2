@@ -9,12 +9,28 @@ import { DDL } from "../src/db/ddl";
 
 const MICROWAVE_CRS_SCHEME = "Compulsory Registration Scheme (CRS / Scheme-II)";
 const MICROWAVE_STANDARD = "IS 302-2-25:2014";
+const LEGACY_DEMO_CRS_NUMBERS = [
+  ["R-99000001", "R-41003456812"], ["R-99000002", "R-41008720411"],
+  ["R-99000003", "R-41011900782"], ["R-99000004", "R-41002551094"],
+  ["R-99000101", "R-41005678901"], ["R-99000102", "R-41006234578"],
+  ["R-99000103", "R-41007321904"], ["R-99000104", "R-41008765430"],
+  ["R-99000105", "R-41009112233"], ["R-99000106", "R-41002445566"],
+  ["R-99000107", "R-41003557788"], ["R-99000108", "R-41004669900"],
+  ["R-99000109", "R-41005771122"], ["R-99000110", "R-41006882233"],
+  ["R-99000111", "R-41007993344"], ["R-99000112", "R-41008104455"],
+] as const;
 
 async function fixMicrowaveScheme(client: { query: (sql: string, params?: unknown[]) => Promise<unknown> }) {
   await client.query(
     "UPDATE standards SET scheme = $1, qco = NULL, mandatory = TRUE WHERE code = $2",
     [MICROWAVE_CRS_SCHEME, MICROWAVE_STANDARD],
   );
+}
+
+async function fixDemoCrsNumbers(client: { query: (sql: string, params?: unknown[]) => Promise<unknown> }) {
+  for (const [current, legacy] of LEGACY_DEMO_CRS_NUMBERS) {
+    await client.query("UPDATE licences SET mark_no = $1 WHERE mark_no = $2", [current, legacy]);
+  }
 }
 
 async function main() {
@@ -31,6 +47,7 @@ async function main() {
     await client.waitReady;
     await client.exec(DDL);
     await fixMicrowaveScheme(client);
+    await fixDemoCrsNumbers(client);
     const { rows } = await client.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM standards",
     );
@@ -54,6 +71,7 @@ async function main() {
   );
   if (res.rows[0].exists) {
     await fixMicrowaveScheme(client);
+    await fixDemoCrsNumbers(client);
     const c = await client.query<{ n: string }>(
       "SELECT count(*)::int AS n FROM standards",
     );
