@@ -40,7 +40,7 @@ const STATUS: Record<string, { label: string; cls: string; advice?: string }> = 
   },
 };
 
-const SAMPLES = ["CM/L-7200045182", "R-41008720411", "HM/C-729001188", "A3K9P2"];
+const SAMPLES = ["CM/L-7200045182", "R-99000002", "HM/C-729001188", "A3K9P2"];
 
 export function Verify() {
   const { locale } = useLocale();
