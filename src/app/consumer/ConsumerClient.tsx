@@ -83,6 +83,9 @@ export function Verify() {
       <p className="mt-2 max-w-[56ch] text-base text-muted">
         {tx(locale, "Enter the number printed with the mark: an ISI licence (CM/L-…), a CRS registration (R-…), a jeweller registration (HM/C-…) or a six-character gold HUID.")}
       </p>
+      <Notice tone="attention" title={tx(locale, "Demo verification only")}>
+        {tx(locale, "This checker searches Pramaan sample records only. It does not confirm a mark with BIS.")}
+      </Notice>
       <form
         noValidate
         onSubmit={(e) => {
@@ -314,6 +317,9 @@ export function ComplaintForm() {
       <p className="mt-2 max-w-[56ch] text-base text-muted">
         {tx(locale, "Fake ISI or CRS marks, unhallmarked gold in a notified district, or a Sold without certification.")}
       </p>
+      <Notice tone="attention" title={tx(locale, "Demo complaint form only")}>
+        {tx(locale, "Reports are saved in Pramaan only and are not sent to BIS. For an official grievance, contact BIS or call 1915.")}
+      </Notice>
       <form noValidate onSubmit={submit} className="mt-5 space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           {field("name", tx(locale, "Your name"), <input {...common("name")} autoComplete="name" onChange={(e) => setForm({ ...form, name: e.target.value })} />)}

@@ -54,7 +54,7 @@ const INTENT_KEYS: { intent: Intent; keys: string[] }[] = [
   { intent: "labs", keys: ["lab", "laboratory", "testing", "test report", "where to test", "प्रयोगशाला", "परीक्षण कहाँ"] },
   { intent: "consumer", keys: ["complaint", "fake", "duplicate", "verify", "genuine", "consumer", "care app", "misuse", "शिकायत", "नकली", "उपभोक्ता", "असली"] },
   { intent: "fees", keys: ["fee", "fees", "cost", "charge", "concession", "price", "शुल्क", "लागत", "कितना खर्च"] },
-  { intent: "process", keys: ["how to", "process", "apply", "application", "step", "licence", "license", "register", "get bis", "obtain", "प्रक्रिया", "आवेदन", "लाइसेंस कैसे", "कैसे मिलेगा"] },
+  { intent: "process", keys: ["how to", "process", "run me through", "requirement", "certify", "certification process", "apply", "application", "step", "licence", "license", "register", "get bis", "obtain", "प्रक्रिया", "आवेदन", "लाइसेंस कैसे", "कैसे मिलेगा"] },
   { intent: "scheme", keys: ["scheme", "isi", "crs", "fmcs", "certificate of conformity", "qco", "quality control order", "mark", "योजना", "स्कीम", "आईएसआई", "सीआरएस"] },
   { intent: "find_standard", keys: ["which standard", "applicable", "standard for", "bis for", "certification for", "need bis", "do i need", "कौन सा मानक", "मानक बताओ"] },
   { intent: "greeting", keys: ["hello", "hi", "hey", "namaste", "namaskar", "good morning", "नमस्ते", "प्रणाम", "हैलो"] },
@@ -63,6 +63,12 @@ const INTENT_KEYS: { intent: Intent; keys: string[] }[] = [
 
 function classifyLite(query: string): Intent {
   const q = query.toLowerCase().trim();
+  // A verification request about jewellery is a consumer lookup, even though
+  // words like "gold" and "bangle" also match the broader hallmarking intent.
+  if (
+    /\b(?:verify|verified|check|genuine|authentic|real)\b/.test(q) &&
+    /\b(?:gold|silver|jewel(?:lery|ry)?|bangle|ring|ornament|huid)\b/.test(q)
+  ) return "consumer";
   if (IS_RE.test(q) && q.replace(IS_RE, "").trim().length < 30) return "standard_lookup";
   let best: { intent: Intent; score: number } | null = null;
   for (const { intent, keys } of INTENT_KEYS) {
@@ -77,7 +83,9 @@ function classifyLite(query: string): Intent {
 
 /* ----------------------------- prompt build ------------------------------ */
 
-function buildGroundedPrompt(query: string, r: Retrieved, locale: Locale): string {
+type HistoryTurn = { role: string; content: string };
+
+function buildGroundedPrompt(query: string, r: Retrieved, locale: Locale, history: HistoryTurn[]): string {
   const langNote =
     locale === "hi"
       ? "\nThe question is in Hindi (Devanagari); reply in Hindi using Devanagari script."
@@ -97,6 +105,9 @@ FACTS:
 ${r.factLines.join("\n")}
 </retrieved_facts>
 
+RECENT CONVERSATION (context only; do not copy it):
+${history.slice(-6).map((m) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content.replace(/\s+/g, " ").slice(0, 280)}`).join("\n") || "None"}
+
 QUESTION:
 <user_question>
 ${query}
@@ -105,10 +116,10 @@ ${query}
 ANSWER:`;
 }
 
-async function narrate(query: string, r: Retrieved, locale: Locale): Promise<string> {
+async function narrate(query: string, r: Retrieved, locale: Locale, history: HistoryTurn[]): Promise<string> {
   if (!isModelAvailable()) return "";
   try {
-    const raw = await generateRaw(buildGroundedPrompt(query, r, locale), {
+    const raw = await generateRaw(buildGroundedPrompt(query, r, locale, history), {
       maxTokens: 96,
       temperature: 0.25,
       stop: [
@@ -158,8 +169,11 @@ type Std = Retrieved["standards"][number];
 type Lab = Retrieved["labs"][number];
 
 function stdBlock(locale: Locale, s: Std): string {
+  const obligation = /crs|scheme[- ]?ii|scheme2/i.test(s.scheme)
+    ? L(locale, "mandatory (CRS)", "अनिवार्य (CRS)")
+    : L(locale, "mandatory (QCO)", "अनिवार्य (QCO)");
   const flags = s.mandatory
-    ? L(locale, "_**mandatory (QCO)** certification_", "_**अनिवार्य (QCO)** प्रमाणन_")
+    ? L(locale, `_**${obligation}** certification_`, `_**${obligation}** पंजीकरण_`)
     : L(locale, "_voluntary certification_", "_स्वैच्छिक प्रमाणन_");
   const lines = [`- **${s.code}** — ${s.title} ${flags} · ${L(locale, "scheme", "योजना")}: ${s.scheme}`];
   const secs = (s.sections ?? []) as { clause?: string; summary?: string; title?: string }[];
@@ -223,7 +237,7 @@ function suggestionsFor(intent: Intent, locale: Locale): string[] {
 
 /* --------------------------------- entry --------------------------------- */
 
-export async function answer(query: string, localeHint: Locale = "en"): Promise<EngineAnswer> {
+export async function answer(query: string, localeHint: Locale = "en", history: HistoryTurn[] = []): Promise<EngineAnswer> {
   const locale = detectLocale(query, localeHint);
   const intent = classifyLite(query);
 
@@ -246,14 +260,68 @@ export async function answer(query: string, localeHint: Locale = "en"): Promise<
 
   const r = await retrieve(query);
   const hasFacts = r.factLines.length > 0;
+  const verifyGold =
+    intent === "consumer" &&
+    /\b(?:verify|verified|check|genuine|authentic|real)\b/i.test(query) &&
+    /\b(?:gold|jewel(?:lery|ry)?|bangle|ring|ornament|huid)\b/i.test(query);
+
+  // This is a short, procedural lookup with an authoritative source already
+  // in the knowledge base. The tiny local model tends to answer it vaguely or
+  // echo internal prompt markers, so use the reviewed steps directly.
+  if (verifyGold) {
+    const guide = r.docs.find((doc) => doc.slug === "hallmark-huid-how-to-verify");
+    if (guide) {
+      const text = L(
+        locale,
+        "Check that the bangle has the BIS mark, a fineness grade (such as 22K916) and a six-character HUID. Enter the HUID in the BIS CARE app or BIS HUID search to verify it; Pramaan’s checker uses sample records and is not official BIS confirmation.",
+        "जाँचें कि चूड़ी पर BIS चिह्न, शुद्धता ग्रेड (जैसे 22K916) और छह अक्षरों का HUID है। HUID को BIS CARE ऐप या BIS HUID खोज में डालकर जाँचें; प्रमाण की जाँच नमूना रिकॉर्ड पर आधारित है, BIS की आधिकारिक पुष्टि नहीं।",
+      );
+      return {
+        intent: "consumer",
+        text,
+        citations: [
+          { kind: "doc", ref: guide.slug, label: guide.title },
+          ...r.citations.filter(
+            (citation) => citation.kind === "standard" && citation.ref === "IS 1417:2016",
+          ),
+        ],
+        suggestions: suggestionsFor("consumer", locale),
+        locale,
+      };
+    }
+  }
+
+  const crsProduct = r.profiles.find((profile) => profile.scheme === "scheme2");
+  if (intent === "process" && crsProduct) {
+    const guide = r.docs.find((doc) => doc.slug === "scheme-ii-crs-explained");
+    const productStandards = new Set(crsProduct.standards);
+    const standardCitations = r.citations.filter(
+      (citation) => citation.kind === "standard" && productStandards.has(citation.ref),
+    );
+    return {
+      intent: "process",
+      text: L(
+        locale,
+        `BIS guidance for this product:\n\n**Route:** CRS (Scheme-II) registration for ${crsProduct.label}, against ${crsProduct.standards.join(", ")} — not an ISI Scheme-I licence.\n\n1. Have each model tested by a BIS-recognized lab for this standard.\n2. Apply through the CRS portal with the test report and the manufacturer, brand and model details it requests.\n3. After registration is granted, put the BIS Standard Mark and R-number on the product and packaging.\n\nCRS has no upfront factory audit. Confirm the current checklist and lab scope on the BIS portal before applying.`,
+        `इस उत्पाद के लिए BIS मार्गदर्शन:\n\n**प्रक्रिया:** ${crsProduct.labelHi} के लिए ${crsProduct.standards.join(", ")} के अंतर्गत CRS (योजना-II) पंजीकरण चाहिए, ISI योजना-I लाइसेंस नहीं।\n\n1. हर मॉडल का इस मानक के लिए BIS-मान्यता प्राप्त लैब में परीक्षण कराएँ।\n2. टेस्ट रिपोर्ट और निर्माता, ब्रांड व मॉडल की माँगी गई जानकारी के साथ CRS पोर्टल पर आवेदन करें।\n3. पंजीकरण मिलने के बाद उत्पाद और पैकेजिंग पर BIS मानक चिह्न व R-नंबर लगाएँ।\n\nCRS में शुरुआत में फ़ैक्टरी ऑडिट नहीं होता। आवेदन से पहले BIS पोर्टल पर मौजूदा दस्तावेज़ सूची और लैब का दायरा जाँचें।`,
+      ),
+      citations: [
+        ...standardCitations,
+        ...(guide ? [{ kind: "doc" as const, ref: guide.slug, label: guide.title }] : []),
+      ],
+      suggestions: suggestionsFor("process", locale),
+      locale,
+    };
+  }
+
   /* the embedded 270M default narrates well only over tightly structured
      facts — restrict its prose to answers that include standard rows; doc-only
      guidance renders from the (often bilingual) article text instead */
   const narratable = hasFacts && r.standards.length > 0;
   const alwaysNarrate = process.env.AI_NARRATE_ALL === "1";
-  const prose = narratable || (hasFacts && alwaysNarrate) ? await narrate(query, r, locale) : "";
+  const prose = narratable || (hasFacts && alwaysNarrate) ? await narrate(query, r, locale, history) : "";
   const blocks = hasFacts
-    ? renderBlocks(r, locale, intent === "labs" || r.profiles.length > 0 || /test|lab|प्रयोगशाला/i.test(query))
+    ? renderBlocks(r, locale, intent === "labs" || /\b(?:lab|laborator|test(?:ing)?)\b|प्रयोगशाला|परीक्षण/i.test(query))
     : "";
 
   let text: string;

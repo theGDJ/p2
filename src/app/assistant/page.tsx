@@ -1,9 +1,11 @@
 import { Suspense } from "react";
 import { Nav } from "@/components/Chrome";
 import { ChatClient } from "@/components/ChatClient";
+import { FinderClient } from "@/components/FinderClient";
 import { db } from "@/db";
 import { chatMessages } from "@/db/schema";
 import { desc, eq } from "drizzle-orm";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +17,8 @@ export const metadata = {
 
 const GREETINGS = new Set(["hello", "hi", "hey", "नमस्ते", "namaste"]);
 
-export default async function AssistantPage() {
+export default async function AssistantPage({ searchParams }: { searchParams: Promise<{ mode?: string }> }) {
+  const { mode } = await searchParams;
   let recent: string[] = [];
   try {
     const rows = await db
@@ -37,9 +40,10 @@ export default async function AssistantPage() {
       <Nav />
       <main id="main" className="pt-8 sm:pt-12">
         <Suspense>
-          <ChatClient recent={recent} />
+          {mode === "identify" ? <FinderClient /> : <ChatClient recent={recent} />}
         </Suspense>
       </main>
+      <ScrollToTop />
     </>
   );
 }

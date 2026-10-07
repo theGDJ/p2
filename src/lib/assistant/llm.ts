@@ -126,6 +126,15 @@ export async function warmup(): Promise<void> {
  * remaining prose looks usable.
  */
 export function sanitiseCompletion(raw: string): { text: string; usable: boolean } {
+  // Tiny completion models sometimes continue a prompt template instead of
+  // answering (for example, emitting <user_answer> or a new "Q:"). None of
+  // that is user-facing prose; reject the whole completion so the engine can
+  // fall back to its grounded catalogue response.
+  const leakedControlText =
+    /<\/?(?:user_answer|user_question|retrieved_facts|system|assistant)\b/i.test(raw) ||
+    /^\s*(?:Q|Question|User|Assistant)\s*:/im.test(raw);
+  if (leakedControlText) return { text: "", usable: false };
+
   const PROMPT_MARKERS = [
     "TASK:", "FACTS:", "EXAMPLE", "END OF", "Question:", "Answer:", "RULES:",
     "Context:", "INSTRUCTIONS", "END OF EXAMPLE", "Solutions:",

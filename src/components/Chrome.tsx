@@ -9,13 +9,11 @@ import { useLocale } from "@/lib/locale-context";
 import { tx } from "@/lib/i18n";
 
 const NAV = [
-  { href: "/assistant", label: "Assistant" },
-  { href: "/finder", label: "Product finder" },
+  { href: "/assistant", label: "Check product" },
   { href: "/standards", label: "Standards" },
-  { href: "/labs", label: "Laboratories" },
-  { href: "/certification", label: "Certification" },
-  { href: "/consumer", label: "Verify a mark" },
-  { href: "/dashboard", label: "Insights" },
+  { href: "/labs", label: "Labs" },
+  { href: "/consumer", label: "Verify & complain" },
+  { href: "/certification", label: "Certification guide" },
 ];
 
 function isActive(pathname: string, href: string) {
@@ -136,45 +134,14 @@ export function Nav() {
 export function Footer() {
   const { locale } = useLocale();
   return (
-    <footer data-site-footer className="mt-24 border-t border-rule bg-sunken">
-      <div className="mx-auto grid max-w-[1240px] gap-10 px-5 py-12 sm:px-8 md:grid-cols-12">
-        <div className="md:col-span-4">
-          <Wordmark />
-          <p className="mt-4 max-w-[38ch] text-sm text-muted">
-            {tx(locale, "Applicable Indian Standards, certification routes, testing laboratories and mark verification — answered from a structured catalogue, with the record shown alongside every answer.")}
-          </p>
-        </div>
-        <nav aria-label="Tools" className="md:col-span-2">
-          <p className="text-sm font-semibold text-ink">{tx(locale, "Tools")}</p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {NAV.map((n) => (
-              <li key={n.href}>
-                <Link href={n.href} className="text-muted hover:text-ink">
-                  {tx(locale, n.label)}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="md:col-span-3">
-          <p className="text-sm font-semibold text-ink">{tx(locale, "Legal references")}</p>
-          <ul className="mt-3 space-y-2 text-sm text-muted">
-            <li>Bureau of Indian Standards Act, 2016</li>
-            <li>BIS (Conformity Assessment) Regulations, 2018</li>
-            <li>
-              <a href="https://www.bis.gov.in/" target="_blank" rel="noreferrer" className="link font-normal text-muted">
-                bis.gov.in
-              </a>
-            </li>
-            <li>Consumer helpline 1915 · BIS Care app</li>
-          </ul>
-        </div>
-        <div className="md:col-span-3">
-          <p className="text-sm font-semibold text-ink">{tx(locale, "About this catalogue")}</p>
-          <p className="mt-3 text-sm text-muted">
-            {tx(locale, "A curated demonstration knowledge base for Indian Standards and BIS services. Laboratory contacts and the licence registry are illustrative. Confirm legal positions on the official BIS portal before relying on them.")}
-          </p>
-        </div>
+    <footer data-site-footer className="border-t border-rule bg-sunken">
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-2 px-5 py-4 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
+        <p>Pramaan · {tx(locale, "Indian standards and certification guidance")}</p>
+        <p>
+          <Link href="/certification" className="link font-normal">{tx(locale, "Certification guide")}</Link>
+          {" · "}<Link href="/dashboard" className="link font-normal">{tx(locale, "Insights")}</Link>
+          {" · "}{tx(locale, "Demo data; confirm legal positions with BIS.")}
+        </p>
       </div>
     </footer>
   );

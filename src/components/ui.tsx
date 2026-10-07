@@ -55,11 +55,12 @@ export function StandardCode({
 }
 
 /** Compulsory vs voluntary — the single most important fact about a standard. */
-export function ObligationTag({ mandatory, long = false }: { mandatory: boolean; long?: boolean }) {
+export function ObligationTag({ mandatory, long = false, scheme = "" }: { mandatory: boolean; long?: boolean; scheme?: string }) {
   const { locale } = useLocale();
+  const isCrs = /crs|scheme[- ]?ii|scheme2/i.test(scheme);
   return mandatory ? (
-    <span className="tag tag-qco" title={tx(locale, "A Quality Control Order makes certification compulsory")}>
-      {tx(locale, long ? "Compulsory under a QCO" : "QCO")}
+    <span className="tag tag-qco" title={tx(locale, isCrs ? "CRS registration is compulsory for this product." : "A Quality Control Order makes certification compulsory")}>
+      {tx(locale, isCrs ? (long ? "CRS registration required" : "CRS") : (long ? "Compulsory under a QCO" : "QCO"))}
     </span>
   ) : (
     <span className="tag">{tx(locale, long ? "Voluntary certification" : "Voluntary")}</span>

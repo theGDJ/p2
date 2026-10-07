@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { standards } from "@/db/schema";
-import { and, eq, ilike, or, sql } from "drizzle-orm";
+import { and, eq, ilike, isNotNull, or, sql } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const conds = [];
   if (code) conds.push(ilike(standards.code, `%${code}%`));
   if (category && category !== "all") conds.push(eq(standards.category, category));
-  if (mandatory === "true") conds.push(eq(standards.mandatory, true));
+  if (mandatory === "true") conds.push(isNotNull(standards.qco));
   if (q) {
     const tokens = q.toLowerCase().split(/\s+/).filter((w) => w.length > 1).slice(0, 6);
     for (const w of tokens) {

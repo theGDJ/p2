@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { and, eq, inArray, ne, sql } from "drizzle-orm";
-import { ArrowRight, MessageSquareText } from "lucide-react";
+import { ArrowRight, Download, MessageSquareText } from "lucide-react";
 import { Nav, Footer } from "@/components/Chrome";
 import { ObligationTag, StandardCode, TierLabel } from "@/components/ui";
 import { db } from "@/db";
@@ -11,6 +11,7 @@ import { SCHEMES } from "@/app/certification/data";
 import { categoryLabel, certificationIdForScheme, codeFromParam, formatCount, standardHref } from "@/lib/format";
 import { getLocale } from "@/lib/server-locale";
 import { tx } from "@/lib/i18n";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,7 @@ export default async function StandardPage({ params }: Props) {
             </nav>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <span className="id text-xl text-ink sm:text-[1.6rem]">{s.code}</span>
-              <ObligationTag mandatory={s.mandatory} long />
+              <ObligationTag mandatory={s.mandatory} long scheme={s.scheme} />
             </div>
             <h1 className="mt-3 max-w-[30ch] text-2xl font-bold leading-tight tracking-[-0.025em] sm:text-[2.25rem] sm:leading-[2.7rem]">
               {s.title}
@@ -295,6 +296,18 @@ export default async function StandardPage({ params }: Props) {
               </nav>
 
               <div className="space-y-2">
+                <a
+                  href="https://standardsbis.bsbedge.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary w-full"
+                >
+                  <Download className="size-4" aria-hidden="true" />
+                  {tx(locale, "Download standard PDF from BIS")}
+                </a>
+                <p className="text-xs text-muted">
+                  {tx(locale, "Search the BIS portal for")} <span className="id">{s.code}</span>.
+                </p>
                 <Link
                   href={`/assistant?q=${encodeURIComponent(`Explain ${s.code}`)}`}
                   className="btn btn-primary w-full"
@@ -311,6 +324,7 @@ export default async function StandardPage({ params }: Props) {
         </div>
       </main>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

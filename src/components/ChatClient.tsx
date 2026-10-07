@@ -12,7 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
-import { t } from "@/lib/i18n";
+import { detectLocale, t, tx } from "@/lib/i18n";
 import { parseAnswer, type LabRecord, type Segment, type StdRecord } from "@/lib/answer-parse";
 import { standardHref, categoryLabel } from "@/lib/format";
 import { Markdown } from "@/components/Markdown";
@@ -97,7 +97,7 @@ function loadDetail(c: Citation): Promise<StdDetail | LabDetail | null> {
   return p;
 }
 
-function SourceRow({ c, n, onAsk }: { c: Citation; n: number; onAsk: (q: string) => void }) {
+function SourceRow({ c, n, onAsk, locale }: { c: Citation; n: number; onAsk: (q: string) => void; locale: Locale }) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [detail, setDetail] = useState<StdDetail | LabDetail | null>(null);
@@ -134,7 +134,7 @@ function SourceRow({ c, n, onAsk }: { c: Citation; n: number; onAsk: (q: string)
           <span className="flex flex-wrap items-baseline gap-x-2">
             <span className="inline-flex items-center gap-1 text-2xs text-muted">
               <Icon className="size-3" aria-hidden="true" />
-              {kindLabel}
+              {tx(locale, kindLabel)}
             </span>
             <span className={c.kind === "standard" ? "id text-sm" : "text-sm font-medium text-ink"}>
               {c.kind === "doc" ? c.label.replace(/ — knowledge base$/, "") : c.ref}
@@ -149,51 +149,51 @@ function SourceRow({ c, n, onAsk }: { c: Citation; n: number; onAsk: (q: string)
       </button>
       {open && (
         <div id={panelId} className="mb-3 ml-[36px] rounded-md bg-sunken px-4 py-3 text-sm">
-          {state === "loading" && <span className="text-muted">Loading the record…</span>}
+          {state === "loading" && <span className="text-muted">{tx(locale, "Loading the record…")}</span>}
           {state === "error" && (
             <span className="text-danger">
-              The record could not be loaded.{" "}
+              {tx(locale, "The record could not be loaded.")}{" "}
               <button type="button" className="link" onClick={() => { setState("idle"); setOpen(false); }}>
-                Close and retry
+                {tx(locale, "Close and retry")}
               </button>
             </span>
           )}
           {c.kind === "doc" && (
             <div className="space-y-2">
-              <TierLabel tier="extract" note={`Article reference: ${c.ref}`} />
+              <TierLabel tier="extract" note={`${tx(locale, "Article reference")}: ${c.ref}`} />
               <p className="text-body">
-                The answer quotes or draws on this guidance article from Pramaan&apos;s knowledge base. Articles cover
-                schemes, processes, fees and verification rather than a single standard.
+                {tx(locale, "The answer quotes or draws on this guidance article from Pramaan's knowledge base. Articles cover schemes, processes, fees and verification rather than a single standard.")}
               </p>
               <button type="button" className="link text-sm" onClick={() => onAsk(`Tell me more about ${c.label}`)}>
-                Ask a follow-up about this article
+                {tx(locale, "Ask a follow-up about this article")}
               </button>
             </div>
           )}
-          {state === "ready" && !detail && <span className="text-muted">No matching record was found in the catalogue.</span>}
+          {state === "ready" && !detail && <span className="text-muted">{tx(locale, "No matching record was found in the catalogue.")}</span>}
           {state === "ready" && detail && c.kind === "standard" && (() => {
             const s = detail as StdDetail;
             return (
               <div className="space-y-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <TierLabel tier="record" />
-                  <ObligationTag mandatory={s.mandatory} long />
+              <ObligationTag mandatory={s.mandatory} long scheme={s.scheme ?? ""} />
                 </div>
                 <p className="text-body">{s.summary}</p>
+                {locale === "hi" && <p className="text-xs text-muted">{tx(locale, "Official standard titles and catalogue summaries are shown in English.")}</p>}
                 <dl className="grid grid-cols-[88px_1fr] gap-x-3 gap-y-1 text-xs">
-                  <dt className="text-muted">Scheme</dt>
+                  <dt className="text-muted">{tx(locale, "Scheme")}</dt>
                   <dd className="text-ink">{s.scheme}</dd>
                   {s.qco && (
                     <>
-                      <dt className="text-muted">Legal basis</dt>
+                      <dt className="text-muted">{tx(locale, "Legal basis")}</dt>
                       <dd className="text-ink">{s.qco}</dd>
                     </>
                   )}
-                  <dt className="text-muted">Category</dt>
+                  <dt className="text-muted">{tx(locale, "Category")}</dt>
                   <dd className="text-ink">{categoryLabel(s.category)}</dd>
                 </dl>
                 <Link href={standardHref(s.code)} className="link inline-block text-sm">
-                  Open the full record for {s.code}
+                  {tx(locale, "Open the full record for")} {s.code}
                 </Link>
               </div>
             );
@@ -202,9 +202,9 @@ function SourceRow({ c, n, onAsk }: { c: Citation; n: number; onAsk: (q: string)
             const l = detail as LabDetail;
             return (
               <div className="space-y-2">
-                <TierLabel tier="record" note="Contact details are illustrative" />
+                <TierLabel tier="record" note={tx(locale, "Contact details are illustrative")} />
                 <p className="text-body">
-                  {l.kind} in {l.city}, {l.state}. Tests {l.capabilities.map(categoryLabel).join(", ").toLowerCase()}.
+                  {tx(locale, l.kind)} · {l.city}, {l.state}. {tx(locale, "Tests")} {l.capabilities.map((item) => tx(locale, categoryLabel(item))).join(", ").toLowerCase()}.
                 </p>
                 {(l.phone || l.email) && (
                   <p className="text-xs text-muted">
@@ -214,7 +214,7 @@ function SourceRow({ c, n, onAsk }: { c: Citation; n: number; onAsk: (q: string)
                   </p>
                 )}
                 <Link href={`/labs?q=${encodeURIComponent(l.name)}`} className="link inline-block text-sm">
-                  View in the laboratory directory
+                  {tx(locale, "View in the laboratory directory")}
                 </Link>
               </div>
             );
@@ -255,7 +255,7 @@ function StandardsBlock({ items, msg, locale }: { items: StdRecord[]; msg: Msg; 
           <li key={s.code} className="py-3 first:pt-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <StandardCode code={s.code} className="text-[15px]" />
-              <ObligationTag mandatory={s.mandatory} />
+              <ObligationTag mandatory={s.mandatory} scheme={s.scheme ?? ""} />
               <Ref n={citeIndex(msg.citations, "standard", (c) => c.ref === s.code)} />
             </div>
             <p className="mt-1 text-base font-medium text-ink">{s.title}</p>
@@ -350,6 +350,7 @@ export function ChatClient({ recent = [] }: { recent?: string[] }) {
   const [input, setInput] = useState("");
   const locale = localeContext.locale;
   const setLocale = localeContext.setLocale;
+  const visibleRecent = recent.filter((question) => detectLocale(question, "en") === locale).slice(0, 5);
   const [busy, setBusy] = useState(false);
   const [slow, setSlow] = useState(false);
   const [restoring, setRestoring] = useState(true);
@@ -565,11 +566,11 @@ export function ChatClient({ recent = [] }: { recent?: string[] }) {
             </div>
           </section>
 
-          {recent.length > 0 && (
+          {visibleRecent.length > 0 && (
             <section>
               <h2 className="text-sm font-semibold">{t(locale, "chat.recent")}</h2>
               <ul className="mt-2 space-y-0.5">
-                {recent.map((r, i) => (
+                {visibleRecent.map((r, i) => (
                   <li key={`${r}-${i}`}>
                     <button
                       type="button"
@@ -604,17 +605,17 @@ export function ChatClient({ recent = [] }: { recent?: string[] }) {
                   <li className="ev ev-record">
                     <TierLabel tier="record" />
                     <p className="mt-1 text-sm text-body">
-                      Codes, obligations, schemes, clauses and laboratories, rendered directly from the catalogue.
+                      {t(locale, "chat.recordHelp")}
                     </p>
                   </li>
                   <li className="ev ev-extract">
                     <TierLabel tier="extract" />
-                    <p className="mt-1 text-sm text-body">Guidance quoted from a named scheme or process article.</p>
+                    <p className="mt-1 text-sm text-body">{t(locale, "chat.extractHelp")}</p>
                   </li>
                   <li className="ev ev-model">
                     <TierLabel tier="model" />
                     <p className="mt-1 text-sm text-body">
-                      A short summary by the language model running on this server. Read it alongside the records.
+                      {t(locale, "chat.modelHelp")}
                     </p>
                   </li>
                 </ol>
@@ -625,14 +626,14 @@ export function ChatClient({ recent = [] }: { recent?: string[] }) {
               m.role === "user" ? (
                 <h2
                   key={m.id}
-                  className={`font-heading text-lg font-semibold leading-snug tracking-[-0.01em] text-ink ${
+                  className={`block w-full font-heading text-lg font-semibold leading-snug tracking-[-0.01em] text-ink ${
                     idx === 0 ? "pt-2" : "mt-12 border-t border-rule pt-8"
                   }`}
                 >
                   {m.content}
                 </h2>
               ) : (
-                <article key={m.id} className="mt-5">
+                <article key={m.id} className="mt-6 block w-full min-w-0 clear-both">
                   <AnswerBody msg={m} locale={locale} />
                   {m.citations && m.citations.length > 0 && (
                     <section className="mt-7">
@@ -641,7 +642,7 @@ export function ChatClient({ recent = [] }: { recent?: string[] }) {
                       </h3>
                       <ol className="mt-1.5 border-y border-rule">
                         {m.citations.map((c, j) => (
-                          <SourceRow key={`${c.kind}-${c.ref}`} c={c} n={j + 1} onAsk={ask} />
+                          <SourceRow key={`${c.kind}-${c.ref}`} c={c} n={j + 1} onAsk={ask} locale={locale} />
                         ))}
                       </ol>
                     </section>

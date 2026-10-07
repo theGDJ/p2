@@ -50,6 +50,16 @@ the API response and stored messages are unchanged.
 API routes, engine, retriever, LLM integration, DB schema, seeds, environment config.
 Follow-up suggestions are not stored by the API, so they appear only on live answers.
 
+## Concision pass
+
+- Removed the home-page specimen, audience grid, evidence explainer and certification table. Home now states the product-to-standard promise, presents the three search modes and one slim trust line in a single viewport.
+- Merged Product Finder into `/assistant`; `/finder` is a permanent redirect. A recognised product now opens a verdict-first result with three standards, one active certification stage and three labs. Unmatched text falls through to the assistant.
+- Reduced primary navigation to Check product, Standards, Labs, and Verify & complain. Certification and Insights remain available in the compact footer.
+- Replaced the all-at-once certification guide with scheme tabs, a keyboard-operable one-step-at-a-time stepper, a persistent document-checklist modal, closed fee/marking/FAQ disclosures and an on-demand route comparison.
+- Capped Standards and Labs at 12 rows per page/load, made the lab filters sticky and tightened row density.
+- Deleted the stale `frontend/` duplicate and `.kilo/worktrees`; their TypeScript and ESLint exclusions were removed too.
+- Kept deterministic fact blocks unchanged while adding the preceding two to three chat turns to the embedded-model prompt.
+
 ## Embedded model finding
 With the default Gemma 3 270M model installed, the engine's sanity guard rejected the model's prose on
 every question tried (7/7), so answers fall back to catalogue records only — the engine's designed

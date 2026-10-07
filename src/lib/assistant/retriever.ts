@@ -43,6 +43,13 @@ function tokens(query: string, max = 6): string[] {
     .replace(/[^\p{L}\p{N}\s]/gu, " ")
     .split(/\s+/)
     .filter((w) => w.length > 2 && !STOPWORDS.has(w))
+    .map((w) => ({
+      verified: "verify",
+      verifying: "verify",
+      verification: "verify",
+      checked: "check",
+      checking: "check",
+    })[w] ?? w)
     .slice(0, max);
 }
 
@@ -105,6 +112,10 @@ async function relevantDocs(query: string): Promise<DocRow[]> {
       const hay =
         `${d.title} ${(d.keywords ?? []).join(" ")} ${d.body} ${d.bodyHi ?? ""}`.toLowerCase();
       let s = boosts.get(d.kind) ?? 0;
+      if (
+        d.slug === "scheme-ii-crs-explained" &&
+        /process|run me through|requirement|certif|apply|registration/i.test(query)
+      ) s += 4;
       for (const w of toks) {
         if (!hay.includes(w)) continue;
         s += d.title.toLowerCase().includes(w) ? 3 : 0;

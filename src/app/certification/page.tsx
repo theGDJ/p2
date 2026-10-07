@@ -6,6 +6,7 @@ import { eq, isNotNull, sql, desc } from "drizzle-orm";
 import { CertificationClient, type CertStats } from "./CertificationClient";
 import { getLocale } from "@/lib/server-locale";
 import { tx } from "@/lib/i18n";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const dynamic = "force-dynamic";
 
@@ -67,13 +68,14 @@ export default async function CertificationPage() {
       <Nav />
       <PageShell
         title={tx(locale, "Certification routes")}
-        description={tx(locale, "How each BIS conformity-assessment route works: who applies, when it is compulsory, the steps, documents, indicative fees and what must be printed on the product.")}
+        description={tx(locale, "Choose a certification route to see who needs it, the main steps and the documents to prepare.")}
       >
         <Suspense>
           <CertificationClient stats={stats} />
         </Suspense>
       </PageShell>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

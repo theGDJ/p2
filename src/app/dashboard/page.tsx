@@ -3,10 +3,11 @@ import { Nav, Footer, PageShell } from "@/components/Chrome";
 import { EmptyState } from "@/components/ui";
 import { db } from "@/db";
 import { chatMessages, complaints, labs, licences, standards } from "@/db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, eq, isNotNull, sql } from "drizzle-orm";
 import { categoryLabel, formatCount, standardHref } from "@/lib/format";
 import { getLocale } from "@/lib/server-locale";
 import { tx } from "@/lib/i18n";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ function Bar({ label, value, max, href, mono = false }: { label: string; value: 
 export default async function DashboardPage() {
   const locale = await getLocale();
   const [stdCount] = await db.select({ c: sql<number>`count(*)` }).from(standards);
-  const [mandCount] = await db.select({ c: sql<number>`count(*)` }).from(standards).where(eq(standards.mandatory, true));
+  const [mandCount] = await db.select({ c: sql<number>`count(*)` }).from(standards).where(isNotNull(standards.qco));
   const [labCount] = await db.select({ c: sql<number>`count(*)` }).from(labs);
   const [licCount] = await db.select({ c: sql<number>`count(*)` }).from(licences);
   const [qCount] = await db.select({ c: sql<number>`count(*)` }).from(chatMessages).where(eq(chatMessages.role, "assistant"));
@@ -112,7 +113,7 @@ export default async function DashboardPage() {
       <Nav />
       <PageShell
         title={tx(locale, "Insights")}
-        description={tx(locale, "How the assistant is being used on this server: the kinds of questions asked, the standards cited most often, catalogue coverage and the latest questions.")}
+        description={tx(locale, "See what people ask, which standards appear most, and how the catalogue is used.")}
       >
         <dl className="grid grid-cols-2 border-y border-rule sm:grid-cols-3 xl:grid-cols-6">
           {counts.map((c, i) => (
@@ -193,6 +194,7 @@ export default async function DashboardPage() {
         </div>
       </PageShell>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

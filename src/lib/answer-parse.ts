@@ -42,6 +42,10 @@ const LEADS = [
   "Here's what the BIS knowledge base says on this:",
   "BIS ज्ञान-आधार में इस विषय पर यह जानकारी है:",
 ];
+const GUIDANCE_LEADS = [
+  "BIS guidance for this product:",
+  "इस उत्पाद के लिए BIS मार्गदर्शन:",
+];
 const STD_RE = /^-\s+\*\*((?:IS|SP|NBC)[^*]*?)\*\*\s+—\s+(.*)$/i;
 const CLAUSE_RE = /^\s+-\s+(?:Clause|खंड)\s+(\S+)\s+—\s+(.*)$/;
 const LAB_HEAD_RE = /^\*\*(Recommended testing facilities|अनुशंसित परीक्षण प्रयोगशालाएँ):\*\*\s*$/;
@@ -88,6 +92,17 @@ export function parseAnswer(text: string, intent?: string): Segment[] {
     if (LEADS.includes(trimmed)) {
       flush();
       sawLead = true;
+      continue;
+    }
+
+    if (GUIDANCE_LEADS.includes(trimmed)) {
+      flush();
+      sawLead = true;
+      out.push({
+        type: "prose",
+        text: trimmed.startsWith("इस उत्पाद") ? "**BIS मार्गदर्शन**" : "**BIS guidance**",
+        generated: false,
+      });
       continue;
     }
 

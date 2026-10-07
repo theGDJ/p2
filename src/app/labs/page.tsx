@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { labs } from "@/db/schema";
 import { getLocale } from "@/lib/server-locale";
 import { tx } from "@/lib/i18n";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +25,7 @@ export default async function LabsPage() {
       <Nav />
       <PageShell
         title={tx(locale, "Laboratories and hallmarking centres")}
-        description={tx(locale, "BIS laboratories, the National Test House, the STQC electronics chain, CSIR and government laboratories, BIS-recognized private laboratories and assaying and hallmarking centres, by state, capability and facility type.")}
+        description={tx(locale, "Find testing labs and hallmarking centres by location, type or product.")}
       >
         <div className="mb-6 max-w-[760px]">
           <Notice title={tx(locale, "Contact details in this directory are illustrative.")}>
@@ -36,6 +37,7 @@ export default async function LabsPage() {
         </Suspense>
       </PageShell>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

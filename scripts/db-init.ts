@@ -7,6 +7,16 @@
 import "dotenv/config";
 import { DDL } from "../src/db/ddl";
 
+const MICROWAVE_CRS_SCHEME = "Compulsory Registration Scheme (CRS / Scheme-II)";
+const MICROWAVE_STANDARD = "IS 302-2-25:2014";
+
+async function fixMicrowaveScheme(client: { query: (sql: string, params?: unknown[]) => Promise<unknown> }) {
+  await client.query(
+    "UPDATE standards SET scheme = $1, qco = NULL, mandatory = TRUE WHERE code = $2",
+    [MICROWAVE_CRS_SCHEME, MICROWAVE_STANDARD],
+  );
+}
+
 async function main() {
   const url = process.env.DATABASE_URL ?? "";
   if (url.startsWith("pglite://")) {
@@ -20,6 +30,7 @@ async function main() {
     const client = new PGlite(path.resolve(process.cwd(), dir));
     await client.waitReady;
     await client.exec(DDL);
+    await fixMicrowaveScheme(client);
     const { rows } = await client.query<{ n: number }>(
       "SELECT count(*)::int AS n FROM standards",
     );
@@ -42,6 +53,7 @@ async function main() {
     "SELECT to_regclass('standards') IS NOT NULL AS exists",
   );
   if (res.rows[0].exists) {
+    await fixMicrowaveScheme(client);
     const c = await client.query<{ n: string }>(
       "SELECT count(*)::int AS n FROM standards",
     );

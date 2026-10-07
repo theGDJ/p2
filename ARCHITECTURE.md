@@ -40,7 +40,7 @@ Optional: `npm run ai:warmup` pre-loads the model so the first chat is fast.
 
 | Table | Purpose | Notable columns |
 |---|---|---|
-| `standards` | The Indian Standards catalogue | `code` (unique, e.g. "IS 456:2000"), `category`, `mandatory` (QCO flag), `scheme`, `qco`, `keywords text[]`, `sections jsonb` (clause/title/summary list), `related text[]`, `editions` |
+| `standards` | Curated Indian Standards catalogue | `code` (unique, e.g. "IS 456:2000"), `category`, `mandatory` (whether certification/registration is compulsory), `scheme`, nullable `qco` (the specific Quality Control Order, when applicable), `keywords text[]`, `sections jsonb` (clause/title/summary list), `related text[]`, `editions` |
 | `knowledge_docs` | Scheme/process/FAQ knowledge articles | `slug` (unique), `kind` (scheme/process/faq/consumer/fees/hallmark/labs/concept), `body`, `body_hi` (Hindi), `keywords`, `refs jsonb` (citations) |
 | `labs` | BIS + recognized testing labs & AHCs | `kind` ("BIS Laboratory" / "Recognized Laboratory" / "AHC"), `capabilities text[]`, `standards text[]` |
 | `licences` | Demo verification registry | `mark_no` (unique: CM/L-, R-, HM/C-, or 6-char HUID), `type` (isi/crs/jeweller/huid), `status` (valid/suspended/expired) |
@@ -49,6 +49,9 @@ Optional: `npm run ai:warmup` pre-loads the model so the first chat is fast.
 | `complaints` | Consumer grievance tickets | `ticket` (BISC-YYYY-######), `name`, `email`, `category`, `product`, `description` |
 
 Indexes: `standards(category)`, `standards(mandatory)`, `docs(kind)`, `labs(state)`.
+
+The standards explorer's “mandatory/QCO” filter and count use a non-null `qco`;
+`mandatory` is broader and can also represent compulsory CRS registration without a QCO.
 
 ### `src/db/seed.ts` — knowledge base loader
 Run with `npx tsx --env-file=.env src/db/seed.ts`. It deletes all four content tables then inserts:
@@ -76,17 +79,17 @@ Run with `npx tsx --env-file=.env src/db/seed.ts`. It deletes all four content t
 ### `src/lib/assistant/engine.ts` — the assistant brain (embedded-model edition)
 The assistant is powered by a **language model embedded in the server process** — a GGUF file executed with llama.cpp (`node-llama-cpp`). There is **no cloud LLM API**: no keys, no per-token cost, no data leaving the box. The shipped default is *Gemma 3 270M (Q4_K_M, ~241 MB)* — deliberately small so it runs on any CPU; `AI_GGUF_PATH`/`AI_MODEL_URL` can swap in any instruct-tuned GGUF (Qwen2.5-0.5B-Instruct, SmolLM2-360M, Llama-3.2-1B, …) for richer prose.
 
-**Pipeline** (`answer(query, localeHint)`):
+**Pipeline** (`answer(query, localeHint, history)`):
 1. **Locale detection** — `detectLocale()` on the raw query (Devanagari → Hindi).
 2. **Retrieval** (`retriever.ts`) — distils the query into a numbered **fact sheet**:
    - IS-code patterns (`IS 456:2000`, `is-694`, `आईएस 2347`) trigger exact catalogue lookups;
    - scored full-text over standard titles/summaries/keywords (token frequency, +0.5 if mandatory);
    - product-alias profiles (`products.ts`) pull their DB standard rows + lab categories;
-   - keyword-scored knowledge-doc search with intent-based kind boosts (fees/hallmark/process/…);
+   - keyword-scored knowledge-doc search with intent-based kind boosts (fees/hallmark/process/…); CRS process questions receive an additional boost for the Scheme-II guide;
    - labs scored by product category + token overlap.
    Emits `{ standards, docs, labs, profiles, factLines[], citations[] }`.
-3. **Model generation** (`llm.ts`) — the LLM is prompted with the fact lines (`TASK … FACTS … Question … Answer`; 96 max tokens, temperature 0.25, repetition/frequency penalties) — never raw table dumps. `sanitiseCompletion()` guards output quality: cuts prompt echoes, stops at the first repeated line (loop detection), caps bullets, and judges whether the prose is usable.
-4. **Deterministic payload blocks** — standard codes/titles/schemes, the first two key clauses, and lab cards are rendered **straight from DB rows** and appended to the model's prose: displayed facts are exact data, and citations always map to retrieved rows. If the model file is missing (`npm run model:download` not run) or its prose fails the sanity check, the answer is still fully formed from these blocks.
+3. **Model generation** (`llm.ts`) — the LLM receives compact retrieved fact lines and up to six recent turns (bounded in length), never raw table dumps. `sanitiseCompletion()` rejects prompt echoes and malformed output. Generated standard numbers are checked against retrieved rows; Hindi prose must actually be in Devanagari. Invalid prose is discarded.
+4. **Deterministic paths and payload blocks** — common hallmark/HUID checks and CRS application guidance use curated responses. Standard codes, titles, schemes, clauses and lab cards are rendered from database rows. If the model is unavailable or its prose fails validation, the response can fall back to deterministic content. The catalogue records are demonstration data, not live BIS records.
 5. **Result** — `{ intent, text (markdown), citations[], suggestions[], locale }`, the same contract as before, so `ChatClient`, session logging and the Insights dashboard are unchanged. The `intent` (lightweight keyword classifier) is kept purely for analytics and suggestion chips.
 
 **Why model prose + deterministic payload?** the default 270 M model is good at short paraphrasing but weak at long recall. Scoping its job to *compose* while the app renders *facts* keeps every citation true — and swapping in a larger instruct model (one env var) upgrades the prose with zero code changes.
@@ -106,7 +109,7 @@ The assistant is powered by a **language model embedded in the server process** 
 1. Parse body: `message` (trim, reject empty or > 2000 chars → 400), optional `sessionId`, `locale`.
 2. No session? Insert a `chat_sessions` row and return its UUID.
 3. Insert the **user** message.
-4. Call `answer(message, locale)` → engine result.
+4. Call `answer(message, locale, recentHistory)` → engine result. Recent history is context for model-written text; catalogue and lab blocks are retrieved for the current question.
 5. Insert the **assistant** message with `intent` and `citations` (this powers the Insights dashboard).
 6. Return `{ sessionId, intent, text, citations, suggestions }`.
 
@@ -186,14 +189,14 @@ The assistant is powered by a **language model embedded in the server process** 
 
 ## 5. End-to-end walkthrough
 
-**"Is ISI mark mandatory for helmets?"** — typed in the chat:
+**"Is BIS certification mandatory for helmets?"** — typed in the chat:
 
 1. `ChatClient.send()` POSTs to `/api/chat`.
 2. Route validates and stores the user message; no session existed → a `chat_sessions` row is created, its UUID returned and cached in localStorage.
 3. Engine: `detectLocale(…)` → `en` (no Devanagari); `classifyLite()` → `scheme` (for analytics/suggestions).
-4. `retrieve()`: the `helmet` product profile maps to IS 4151:2015 → its DB row is pulled; the `scheme` keyword hints boost the scheme knowledge docs → fact lines are composed.
-5. The embedded model (llama.cpp + GGUF, in-process) receives the `[1]…[n]` fact lines + the question and writes 1–3 sentences.
-6. Deterministic payload blocks append the exact IS 4151:2015 row (title, mandatory flag, scheme, key clauses) plus lab cards.
+4. `retrieve()`: product aliases, query tokens and process intent guide retrieval of matching standards, guidance and labs.
+5. The embedded model receives retrieved fact lines and writes a short explanation. Its prose is discarded if it echoes prompt structure, invents a standard number, or fails the Hindi-language check.
+6. Deterministic payload blocks display exact standard fields, key clauses and matching lab records with citations.
 7. Route stores the assistant message with `intent` + `citations` (`scheme-isi` doc + `IS 4151:2015` standard).
 8. Client renders markdown + citation chips + "Ask next" suggestions.
 
@@ -209,9 +212,40 @@ The assistant is powered by a **language model embedded in the server process** 
 **Trade-offs of a 270M default:** latency is a few hundred ms per answer on 2 CPU cores and RAM stays ≈0.7 GB, but prose is short and foreign-language (Hindi) generation is weak — the app instructs Devanagari replies, and falls back to English data blocks when the prose fails the sanity guard. Production deployments should set `AI_MODEL_URL` to an instruct GGUF; the fact-sheet pipeline, sanity guard and deterministic payloads are model-agnostic and keep citations exact either way.
 
 **Known limits (prototype scope):**
-- Answers are single-turn (the model sees only the current question); conversation history is stored for the UI but not yet fed back into the prompt.
+- The model sees the preceding two to three chat turns as bounded context; deterministic catalogue and lab blocks remain based only on the current retrieval result.
 - Retrieval is `LIKE`/substring based, not true full-text or vector search — long natural-language queries may miss; ranking heuristics compensate.
 - Product coverage is 20 curated families; unknown products fall back to token search or a graceful "cannot map".
 - The licence registry is **demo data** — real verification needs the official BIS API/registry.
 - `relevantDocs` and `labsFor` load full tables and filter in JS — fine at this scale (29 docs / 394 labs), would need SQL filtering at production scale.
 - `/api/chat` GET returns messages without auth — session UUIDs are the only access control, acceptable for a demo, not for production PII.
+
+### Scan & Verify
+
+The Verify card offers an optional photo scan. The image is previewed and downscaled
+in the browser, then grayscale/contrast preprocessing and Tesseract OCR run in a
+Web Worker with locally served English and Hindi trained data. The image and raw
+OCR text stay in the browser; only the user-editable mark identifiers and an
+optional detected IS code are sent to `POST /api/verify/scan`. The scan route
+validates identifiers against shared mark-number patterns, looks up exact
+`licences.mark_no` values, and returns registry rows plus format, status, date and
+standard-consistency checks. The existing typed `POST /api/verify` flow is unchanged.
+
+The registry is demonstration data, not an official verification source. A genuine
+registry number can be copied onto a counterfeit label, so compare the recorded
+holder and product with the item purchased. Official confirmation is through the
+BIS Care App or BIS helpline 1915. OCR can misread blurred, angled, reflective or
+small print; users can edit the extracted number or use typed verification.
+Six-character HUIDs are inherently ambiguous, so automatic extraction requires a
+nearby “HUID” label.
+
+Photo examples to try manually (no binary fixtures are committed):
+
+- A close, well-lit crop of an ISI label showing a CM/L- number and its IS code.
+- An electronics package label showing the CRS R-number and model/standard text.
+- A jewellery hallmark close-up with the six-character HUID and the “HUID” caption.
+
+Additional known limits for this feature:
+
+- The OCR engine and language data are served locally for offline use after the app is loaded, but first-time page assets still need to be available from the app host.
+- OCR confidence is approximate; the UI always presents detected identifiers for user correction and does not treat OCR as proof.
+- HUID recognition depends on visible nearby text reading “HUID”; an isolated six-character code is intentionally not guessed.
